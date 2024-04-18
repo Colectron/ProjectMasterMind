@@ -125,4 +125,36 @@ clickCount2Colour <- function(clickCount){
 #   return(NULL)
 # }
 
+
+# generateButton ----------------------------------------------------------
+# State : WIP
+# Description : Function to generate a new button with the specified label
+# Input :
+#        label : character, label of the button
+# Output :
+### ///////////////////////////////////////////////////////////////////////
+generateButton <- function(btn_name,clr) {
+  
+  button_style <- paste0(
+      "color: white;
+          background-color: ",
+      colour[unlist(clr) + 1],
+      ";
+          position: relative;
+          left: 3%;
+          height: 35px;
+          width: 35px;
+          text-align:center;
+          text-indent: -2px;
+          border-radius: 50%;
+          border-width: 2px"
+    )
+  
+  actionButton(
+    inputId = paste0("dynamic_button_", btn_name),
+    label = "",
+    style = button_style
+    )
+}
+
 # END

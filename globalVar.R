@@ -22,4 +22,6 @@ colour <-
     "#df5abe"
   )
 
+secret_combination <- sample(1:length(colour),4,replace = TRUE)
+
 # END
