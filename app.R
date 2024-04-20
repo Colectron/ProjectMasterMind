@@ -1,18 +1,16 @@
-# Description : 
-# 
-# mastermind colour :
-# green : "#43caa7"
-# blue : "#000bdf"
-# red : "#df0000"
-# violet : "#701abf"
-# yellow :"#dfbe00"
-# orange : "#ff7e31"
-# white : "#ffffff"
-# pink : "#df5abe"
-
+# Description :
 
 
 # Libraries ---------------------------------------------------------------
+### ///////////////////////////////////////////////////////////////////////
+# Script name : app.R
+# Script status : WIP
+# Script description : Build the shiny app to be able to play mastermind and to
+#                      test algorithm that solves master mind. 
+#                      The app has two panels, a game panel which code the 
+#                      classical mastermind. A test panel that enable the user 
+#                      to load a script that solve the the game.
+### ///////////////////////////////////////////////////////////////////////
 
 
 library(shiny)
@@ -24,169 +22,162 @@ library(tidyverse)
 options(shiny.reactlog = TRUE)
 
 # Load functions ----------------------------------------------------------
-btnCLickNDisplay <- function(input, output, colour, btnName){
-  
-  # Initialize button variables
-  clickCount <- reactiveVal(0)
-  
-  # Update click variables
-  observeEvent(input[[btnName]], {
-    clickCount(clickCount() + 1)
-  })
-  
-  # Build the button parameters
-  button_colour <- reactive(colour[clickCount() %% 8 + 1])
-  button_style <- reactive(
-    paste0(
-      "color: white;
-          background-color: ",
-      button_colour(),
-      ";
-          position: relative;
-          left: 3%;
-          height: 35px; 
-          width: 35px;
-          text-align:center;
-          text-indent: -2px;
-          border-radius: 50%;
-          border-width: 2px"
-    )
-  )
-  
-  # Display the buttons
-  output[[btnName]] <-
-    renderUI({
-      actionButton(inputId = btnName,
-                   label = "",
-                   style = button_style())
-    })
-  
-  # Extract colour
-  btnColourName = paste0(btnName,"Colour")
-  output[[btnColourName]] = clickCount
-  
-  # Build output
-  return( clickCount )
-}
 
-# buttons = reactiveVar(c(btn1(),btn2(),btn3(),btn4()))
+source("fct4app.r")
 
-btnPageantry <- function(input,output,buttons){
-  
-  for(btn in buttons){
-    button_style <- reactive(
-      paste0(
-        "color: white;
-          background-color: ",
-        btn(),
-        ";
-          position: relative;
-          left: 3%;
-          height: 35px; 
-          width: 35px;
-          text-align:center;
-          text-indent: -2px;
-          border-radius: 50%;
-          border-width: 2px"
-      )
-    )
-    
-    insertUI(
-      selector = "#my_buttons",
-    )
-    
-    output[[btnName]] <-
-      renderUI({
-        actionButton(inputId = btnName,
-                     label = "",
-                     style = button_style())
-      })
-    
-  }
-  
-  
-  
-  return(NULL)
-}
+# Load global variables ---------------------------------------------------
+
+source("globalVar.R")
 
 # UI ----------------------------------------------------------------------
 
-ui <- fluidPage(
-  titlePanel("My great mastermind !!!"),
-  sidebarLayout(
-    mainPanel(
-      titlePanel("toto"),
-      plotOutput("my_plot")
-    ),
-    sidebarPanel(
-      uiOutput(style = "display: inline-block", "button1"),
-      uiOutput(style = "display: inline-block", "button2"),
-      uiOutput(style = "display: inline-block", "button3"),
-      uiOutput(style = "display: inline-block", "button4"),
-      actionButton("reset_button", "Submit")
-    )
-  )
-)
-
+ui <- fluidPage(titlePanel("My great mastermind !!!"),
+                sidebarLayout(
+                  sidebarPanel(
+                    titlePanel("Combination played"),
+                    uiOutput("dynamic_rows")
+                  ),
+                  mainPanel(
+                    titlePanel("Your next move"),
+                    # Four button to play with
+                    uiOutput(style = "display: inline-block", "button1"),
+                    uiOutput(style = "display: inline-block", "button2"),
+                    uiOutput(style = "display: inline-block", "button3"),
+                    uiOutput(style = "display: inline-block", "button4"),
+                    # uiOutput("secret_combination"), # uncomment to show 
+                    actionButton("Submit_button", "submit"),
+                    # Recap of all the possible colours
+                    column(3, offset = 5, align = "center", uiOutput("show_paragraph")),
+                    uiOutput("show_colour")
+                  )
+                ))
+#button_panel
 # Server ------------------------------------------------------------------
 
-
 server <- function(input, output) {
-  # Initialize global variables
-  colour <-
-    c(
-      "#43caa7",
-      "#000bdf",
-      "#df0000",
-      "#701abf",
-      "#dfbe00",
-      "#ff7e31",
-      "#ffffff",
-      "#df5abe"
-    )
+  # Secret combination buttons
+  btn5 <- generateButton(btn_name = "s_comb_1",clr = secret_combination[1])
+  btn6 <- generateButton(btn_name = "s_comb_2",clr = secret_combination[2])
+  btn7 <- generateButton(btn_name = "s_comb_3",clr = secret_combination[3])
+  btn8 <- generateButton(btn_name = "s_comb_4",clr = secret_combination[4])
+
+  output$secret_combination <- renderUI({
+    tagList(btn5,btn6,btn7,btn8)
+  })
   
-  # Build the button 
-  btn1 <- btnCLickNDisplay(input, output, colour, btnName = "button1" )
-  btn2 <- btnCLickNDisplay(input, output, colour, btnName = "button2" )
-  btn3 <- btnCLickNDisplay(input, output, colour, btnName = "button3" )
-  btn4 <- btnCLickNDisplay(input, output, colour, btnName = "button4" )
+  # Playable buttons to submit
+  btn1 <- btnCLickNDisplay(input, output, btnName = "button1")
+  btn2 <- btnCLickNDisplay(input, output, btnName = "button2")
+  btn3 <- btnCLickNDisplay(input, output, btnName = "button3")
+  btn4 <- btnCLickNDisplay(input, output, btnName = "button4")
   
-  
+  # Show the possible colours and the order
+  output$show_paragraph <- renderUI({
+    paragraph <- "List and order of all the possible colour"
+    tags$p(paragraph)
+  })
+  output$show_colour <- renderUI({
+    # Create the list of buttons
+    btn_show_colour <- lapply(
+      c(0:(length(colour) - 1)),
+      function(x){
+        btn_tmp = generateButton(btn_name = paste0("possible_colour",x),clr = x)
+        fluidRow(column(width = 1,offset = 6, btn_tmp))
+        } 
+      )
+    do.call(tagList, btn_show_colour)
+    })
+    
   # Reactive data frame
-  df <- reactiveVal(tibble(btn1 = 0, btn2 = 0, btn3 = 0, btn4 = 0, `Try n°` = 0))
-  observeEvent(input[["reset_button"]],
+  # df_data <-
+  #   tibble(
+  #     btn1 = 0,
+  #     btn2 = 0,
+  #     btn3 = 0,
+  #     btn4 = 0,
+  #     `Try n°` = 1,
+  #     nbRed = 0,
+  #     nbWhite = 0
+  #   )
+  submit_clicks <- reactiveVal(0)
+  buttons <- reactiveVal(list())
+  
+  # What happened when you click on submit
+  observeEvent(input[["Submit_button"]],
                {
-                 # Update the data frame
-                 df_data <- rbind(df(), c(btn1(), btn2(), btn3(), btn4())) %>% mutate(`Try n°` = row_number())
-                 df_data <- df_data
-                 df(df_data)
+                 # Update number of clicks of the submit button
+                 submit_clicks(submit_clicks() + 1)
                  
-                 # Add Pageantry button on the main pannel to show the combinaisons played
+                 # Update the data frame 
+                 #        Create the new line
+                 new_line = tibble(btn1 = btn1() %% 8, 
+                                   btn2 = btn2() %% 8, 
+                                   btn3 = btn3() %% 8, 
+                                   btn4 = btn4() %% 8, 
+                                   `Try n°` = submit_clicks()) %>% 
+                   mutate(
+                     redNWhite(
+                       currentTry = c(btn1,btn2,btn3,btn4),
+                       toFind = secret_combination
+                       )
+                   )
                  
-                 # Print the data frame storing all the try
-                 print( df_data %>%
-                 pivot_longer(1:4,names_to = "btnID",values_to = "colour") %>%
-                 mutate(
-                   btnID = str_replace(btnID, "btn", "")
-                   ),
-                 colourDF = colour[colourDF %% 8 +1]
-                 )
-               }
-               )
+                 #        Add the new line to the current data frame
+                 # df_data <<- rbind(df_data, new_line)
+                 # df_data <- df_data
+                 
+                 # Generate played buttons
+                 played_buttons <- lapply(1:4, function(i) {
+                   generateButton(
+                     btn_name = (submit_clicks() - 1) * 4 + i , 
+                     clr = new_line[,i] ) 
+                 })
+                 
+                 # Generate hint buttons
+                 hint_buttons <- hintButton(
+                   hints_info = new_line[,c("nbRed","nbWhite")]
+                   )
+                 
+                 # Add the new buttons to the list of buttons we just created
+                 buttons_list <- buttons()
+                 buttons_list[[submit_clicks()]] <- list(
+                   played = played_buttons,
+                   hint = hint_buttons
+                   )
+                 buttons(buttons_list)
+                 
+               })
   
-  # Plot the game
-  # output$my_plot <- renderPlot({
-  # df() %>%
-  #     pivot_longer(1:4,names_to = "btnID",values_to = "colourDF") %>%
-  #     mutate(
-  #       btnID = str_replace(btnID, "btn", ""),
-  #       colourDF = colour[colourDF %% 8 +1]
-  #       ) %>%
-  #     ggplot(aes(btnID,`Try n°`,colour = colourDF)) +
-  #     geom_point(size = 20) +  # /(nrow(df())^1)
-  #     scale_colour_identity()
-  # })
+  # Render the dynamic_rows to show combination played
+  output$dynamic_rows <- renderUI({
+    # Get the list of buttons
+    buttons_list <- buttons()
+    
+    # Create a list to store button elements
+    button_elements <- lapply(buttons_list, function(buttons_row) {
+      fluidRow(
+        # Combination just played
+        column(width = 1, buttons_row$played[[1]]),
+        column(width = 1, buttons_row$played[[2]]),
+        column(width = 1, buttons_row$played[[3]]),
+        column(width = 1, buttons_row$played[[4]]),
+        # All the hints
+        column(
+          width = 1, 
+          buttons_row$hint[[1]],
+          buttons_row$hint[[2]]
+          ),
+        column(
+          width = 1,
+          buttons_row$hint[[3]],
+          buttons_row$hint[[4]]
+          )
+        )
+    })
   
+    # Convert the list of button elements to a tagList
+    do.call(tagList, button_elements)
+  })
 }
 
 shinyApp(ui, server)
