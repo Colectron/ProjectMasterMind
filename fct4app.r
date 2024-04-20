@@ -28,11 +28,11 @@ btnCLickNDisplay <- function(input, output, btnName) {
   
   # Update click variables
   observeEvent(input[[btnName]], {
-    clickCount(clickCount() + 1)
+    clickCount( clickCount() + 1 ) 
   })
   
   # Build the button parameters
-  button_colour <- reactive( clickCount2Colour(clickCount) ) # The warning is normal
+  button_colour <- reactive( clickCount2Colour(clickCount) ) 
   button_style <- reactive(
     paste0(
       "color: white;
@@ -134,7 +134,6 @@ clickCount2Colour <- function(clickCount){
 # Output :
 ### ///////////////////////////////////////////////////////////////////////
 generateButton <- function(btn_name,clr) {
-  
   button_style <- paste0(
       "color: white;
           background-color: ",
@@ -142,19 +141,113 @@ generateButton <- function(btn_name,clr) {
       ";
           position: relative;
           left: 3%;
-          height: 35px;
-          width: 35px;
+          height: 25px;
+          width: 25px;
           text-align:center;
           text-indent: -2px;
           border-radius: 50%;
           border-width: 2px"
     )
   
-  actionButton(
+  output = actionButton(
     inputId = paste0("dynamic_button_", btn_name),
     label = "",
     style = button_style
     )
+  return(output)
+}
+
+
+# redNWhite ---------------------------------------------------------------
+# State : DONE
+# Description : Function to compute the number of Red & white powns to return 
+#               giving a try and a secret sequence.
+# Input :
+#        currentTry : numerical vector
+#        toFind : numerical vector of the same length as currentTry
+# Output :
+### ///////////////////////////////////////////////////////////////////////
+redNWhite <- function(currentTry,toFind){
+  # browser()
+  nbRed = 0
+  nbWhite = 0
+  currentTryCurrent = currentTry
+  
+  for (i in unique(toFind) ) {
+    nbRedFound = sum(( which(toFind == i) %in% which(currentTry == i) ))
+    nbRed = nbRed + nbRedFound
+    if ( length(which(toFind == i)) > nbRedFound ) {
+      nbWhite = nbWhite + 
+        (
+          min( length(which(currentTry == i)) , length(which(toFind == i)) ) - 
+            nbRedFound
+        )
+    }
+  }
+  
+  output = tibble(nbRed = nbRed , nbWhite = nbWhite )
+  return(output)
+}
+
+
+# hintButton --------------------------------------------------------------
+# State : WIP
+# Description : Function to compute the number of Red & white powns to return 
+#               giving a try and a secret sequence.
+# Input :
+#        currentTry : numerical vector
+#        toFind : numerical vector of the same length as currentTry
+# Output :
+### ///////////////////////////////////////////////////////////////////////
+hintButton <- function(hints_info) {
+  # Initiate variables
+  btn_fct <- function(x,clr){
+    btn_style = paste0(
+      "color: black;
+          background-color:", clr,";
+          position: relative;
+          left: 3%;
+          height: 1px;
+          width: 1px;
+          text-align:center;
+          text-indent: 0px;
+          border-width: 2px"
+    )
+    
+    output = actionButton(
+        inputId = paste0("dynamic_button_", "hint_red", counter),
+        label = "",
+        style = btn_style
+      )
+    
+    counter <<- counter + 1
+    
+    return(output)
+  }
+  
+  counter = 1
+  # Build lists
+  red_buttons <-
+    lapply(
+      vector(mode = "list", length = hints_info$nbRed),
+      function(x){btn_fct(x,"red")}
+           )     
+  white_buttons <-
+    lapply(
+      vector(mode = "list", length = hints_info$nbWhite),
+      function(x){btn_fct(x,"white")}
+    )  
+      
+  # Merge lists in output
+  output = c(red_buttons,white_buttons)
+  
+  if (length(output) < 4) {
+    for (i in (length(output) + 1):4) {
+      output[[i]] = list()
+    }
+  }
+  return(output)
 }
 
 # END
+
