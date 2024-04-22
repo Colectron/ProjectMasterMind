@@ -96,8 +96,8 @@ server <- function(input, output) {
   #     btn3 = 0,
   #     btn4 = 0,
   #     `Try n°` = 1,
-  #     nbRed = 0,
-  #     nbWhite = 0
+  #     nb_red = 0,
+  #     nb_white = 0
   #   )
   submit_clicks <- reactiveVal(0)
   buttons <- reactiveVal(list())
@@ -117,8 +117,8 @@ server <- function(input, output) {
                                    `Try n°` = submit_clicks()) %>% 
                    mutate(
                      redNWhite(
-                       currentTry = c(btn1,btn2,btn3,btn4),
-                       toFind = secret_combination
+                       current_try = c(btn1,btn2,btn3,btn4),
+                       to_find = secret_combination
                        )
                    )
                  
@@ -135,7 +135,7 @@ server <- function(input, output) {
                  
                  # Generate hint buttons
                  hint_buttons <- hintButton(
-                   hints_info = new_line[,c("nbRed","nbWhite")]
+                   hints_info = new_line[,c("nb_red","nb_white")]
                    )
                  
                  # Add the new buttons to the list of buttons we just created

@@ -160,43 +160,40 @@ generateButton <- function(btn_name,clr) {
 
 # redNWhite ---------------------------------------------------------------
 # State : DONE
-# Description : Function to compute the number of Red & white powns to return 
+# Description : Function to compute the number of Red & white pawns to return 
 #               giving a try and a secret sequence.
 # Input :
-#        currentTry : numerical vector
-#        toFind : numerical vector of the same length as currentTry
+#        current_try : numerical vector
+#        to_find : numerical vector of the same length as current_try
 # Output :
 ### ///////////////////////////////////////////////////////////////////////
-redNWhite <- function(currentTry,toFind){
+redNWhite <- function(current_try,to_find){
   # browser()
-  nbRed = 0
-  nbWhite = 0
-  currentTryCurrent = currentTry
+  nb_red = 0
+  nb_white = 0
   
-  for (i in unique(toFind) ) {
-    nbRedFound = sum(( which(toFind == i) %in% which(currentTry == i) ))
-    nbRed = nbRed + nbRedFound
-    if ( length(which(toFind == i)) > nbRedFound ) {
-      nbWhite = nbWhite + 
+  for (i in unique(to_find) ) {
+    nb_red_found = sum(( which(to_find == i) %in% which(current_try == i) ))
+    nb_red = nb_red + nb_red_found
+    if ( length(which(to_find == i)) > nb_red_found ) {
+      nb_white = nb_white + 
         (
-          min( length(which(currentTry == i)) , length(which(toFind == i)) ) - 
-            nbRedFound
+          min( length(which(current_try == i)) , length(which(to_find == i)) ) - 
+            nb_red_found
         )
     }
   }
   
-  output = tibble(nbRed = nbRed , nbWhite = nbWhite )
+  output = tibble(nb_red = nb_red , nb_white = nb_white )
   return(output)
 }
 
 
 # hintButton --------------------------------------------------------------
 # State : WIP
-# Description : Function to compute the number of Red & white powns to return 
+# Description : Function to compute the number of Red & white pawns to return 
 #               giving a try and a secret sequence.
 # Input :
-#        currentTry : numerical vector
-#        toFind : numerical vector of the same length as currentTry
 # Output :
 ### ///////////////////////////////////////////////////////////////////////
 hintButton <- function(hints_info) {
@@ -229,12 +226,12 @@ hintButton <- function(hints_info) {
   # Build lists
   red_buttons <-
     lapply(
-      vector(mode = "list", length = hints_info$nbRed),
+      vector(mode = "list", length = hints_info$nb_red),
       function(x){btn_fct(x,"red")}
            )     
   white_buttons <-
     lapply(
-      vector(mode = "list", length = hints_info$nbWhite),
+      vector(mode = "list", length = hints_info$nb_white),
       function(x){btn_fct(x,"white")}
     )  
       
@@ -248,6 +245,49 @@ hintButton <- function(hints_info) {
   }
   return(output)
 }
+
+# oneRun ------------------------------------------------------------------
+# State : WIP
+# Description : Run one simulation of a game giving a secret combination and 
+#               a solver function. 
+#               TO DO : describe the specifications of the solver function
+# Input :
+#        scrt_cmb : secret combination to find numerical vector of length 4
+#        slvr : solver R function object. It has as input a game history and
+#               gives as an output a new combination.
+# Output :
+### ///////////////////////////////////////////////////////////////////////
+
+oneRun <- function(scrt_cmb,slvr){
+  # initiate game
+  game <- list(
+    n_clr = length(colour), # total number of colour
+    history = tibble(
+      pawn1 = -1,
+      pawn2 = -1,
+      pawn3 = -1,
+      pawn4 = -1,
+      nb_red = -1, # win if = 4
+      nb_white = -1
+    )
+  )
+  
+  # Loop till we find the correct combination
+  nb_try <- 1
+  while (game$history$nb_red[nb_try] != 4) {
+    current_try = slvr(game$history)
+    current_line = c(current_try,
+                     redNWhite(
+                       current_try = current_try,
+                       to_find = scrt_cmb)
+    ) %>% unlist
+    game$history = rbind(game$history,current_line)
+    nb_try = nb_try + 1
+  }
+  
+  return(nb_try)
+}
+
 
 # END
 
