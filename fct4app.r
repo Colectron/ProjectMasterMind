@@ -233,12 +233,16 @@ oneRun <- function(scrt_cmb,slvr_f_p){
   runing_time <- 0
   nb_try <- 1
   while (game$history$nb_red[nb_try] != 4) {
+<<<<<<< HEAD
     # Compute solution
     start_time <- Sys.time()  
     current_try = as.vector(solver(game$history))
     end_time <- Sys.time()
     runing_time <- runing_time + end_time - start_time
     
+=======
+    current_try = as.vector(solver(game$history))
+>>>>>>> e30d2b6 (test)
     current_line = c(current_try,
                      redNWhite(
                        current_try = current_try,
@@ -248,11 +252,19 @@ oneRun <- function(scrt_cmb,slvr_f_p){
     nb_try = nb_try + 1
     
     ### DEBUG
+<<<<<<< HEAD
     if (FALSE) {
       print("------------------")
       print(sprintf("Secret combination %s", paste(scrt_cmb,collapse = "")))
       print(sprintf("N° try %s", nb_try))
       print(sprintf("Comb tried %s", paste(current_try,collapse = "")))
+=======
+    if(FALSE){
+      print("------------------")
+      print(sprintf("Secret combination %s", paste(scrt_cmb,collapse="")))
+      print(sprintf("N° try %s", nb_try))
+      print(sprintf("Comb tried %s", paste(current_try,collapse="")))
+>>>>>>> e30d2b6 (test)
     }
   }
   
@@ -341,6 +353,24 @@ histPerfSolver <- function(data, column, x_lab = column, title_precision = NULL,
     }
   
   return(p)
+}
+
+
+# Progression bar from the internet ---------------------------------------
+spawn_progressbar <- function(x, .name = .pb, .times = 1) {
+  .name <- substitute(.name)
+  n <- nrow(x) * .times
+  eval(substitute(.name <<- dplyr::progress_estimated(n)))
+  x
+}
+
+## make function to be map'ed accept progressbar as argument and
+## update on call
+slow_mean <- function(x, .var, .pb) {
+  Sys.sleep(1)
+  .pb$tick()$print()
+  .var <- rlang::enexpr(.var)
+  mean(x[[.var]])
 }
 
 

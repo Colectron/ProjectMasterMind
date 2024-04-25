@@ -8,7 +8,11 @@ solver_dumbest <- function(history){
 
 # Very dumb solver --------------------------------------------------------
 comb_to_test <- crossing(sqr1 = 1:8, sqr2 = 1:8, sqr3 = 1:8, sqr4 = 1:8)
+<<<<<<< HEAD
 iter <-  1
+=======
+iter = 1
+>>>>>>> e30d2b6 (test)
 solver_very_dumb <- function(history){
   output = comb_to_test[iter,]
   iter <<- iter + 1
@@ -78,7 +82,6 @@ solver_a_bit_smarter <- function(history){
   iter <<- iter + 1
   return(output)
 }
-
 
 
 # Write the name of your function here
