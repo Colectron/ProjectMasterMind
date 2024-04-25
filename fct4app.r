@@ -64,7 +64,7 @@ btnCLickNDisplay <- function(input, output, btnName) {
 
 
 # clickCount2Colour -------------------------------------------------------
-# State : WIP
+# State : WIP -> add a description to the function
 # Description : Transform a number to a colour according to its position in the
 #               global variable colour.
 # Input :
@@ -78,56 +78,8 @@ clickCount2Colour <- function(clickCount){
   return(.colour)
 }
 
-# btnPageantry ------------------------------------------------------------
-# State : WIP
-# Description :
-# Input :
-# Output :
-### ///////////////////////////////////////////////////////////////////////
-
-# buttons = reactiveVar(c(btn1(),btn2(),btn3(),btn4()))
-#
-# btnPageantry <- function(input,output,buttons){
-#
-#   for(btn in buttons){
-#     button_style <- reactive(
-#       paste0(
-#         "color: white;
-#           background-color: ",
-#         btn(),
-#         ";
-#           position: relative;
-#           left: 3%;
-#           height: 35px;
-#           width: 35px;
-#           text-align:center;
-#           text-indent: -2px;
-#           border-radius: 50%;
-#           border-width: 2px"
-#       )
-#     )
-#
-#     insertUI(
-#       selector = "#my_buttons",
-#     )
-#
-#     output[[btnName]] <-
-#       renderUI({
-#         actionButton(inputId = btnName,
-#                      label = "",
-#                      style = button_style())
-#       })
-#
-#   }
-#
-#
-#
-#   return(NULL)
-# }
-
-
 # generateButton ----------------------------------------------------------
-# State : WIP
+# State : WIP -> add a description to the function
 # Description : Function to generate a new button with the specified label
 # Input :
 #        label : character, label of the button
@@ -190,7 +142,7 @@ redNWhite <- function(current_try,to_find){
 
 
 # hintButton --------------------------------------------------------------
-# State : WIP
+# State : WIP -> add a description to the function
 # Description : Function to compute the number of Red & white pawns to return 
 #               giving a try and a secret sequence.
 # Input :
@@ -258,7 +210,12 @@ hintButton <- function(hints_info) {
 # Output :
 ### ///////////////////////////////////////////////////////////////////////
 
-oneRun <- function(scrt_cmb,slvr){
+oneRun <- function(scrt_cmb,slvr_f_p){
+  scrt_cmb = unlist(scrt_cmb) # force the type of scrt_cmb to be a simple vector
+  
+  # Source the function
+  source(slvr_f_p)
+  
   # initiate game
   game <- list(
     n_clr = length(colour), # total number of colour
@@ -275,7 +232,7 @@ oneRun <- function(scrt_cmb,slvr){
   # Loop till we find the correct combination
   nb_try <- 1
   while (game$history$nb_red[nb_try] != 4) {
-    current_try = slvr(game$history)
+    current_try = as.vector(solver(game$history))
     current_line = c(current_try,
                      redNWhite(
                        current_try = current_try,
@@ -283,9 +240,35 @@ oneRun <- function(scrt_cmb,slvr){
     ) %>% unlist
     game$history = rbind(game$history,current_line)
     nb_try = nb_try + 1
+    
+    ### DEBUG
+    if(FALSE){
+      print("------------------")
+      print(sprintf("Secret combination %s", paste(scrt_cmb,collapse="")))
+      print(sprintf("N° try %s", nb_try))
+      print(sprintf("Comb tried %s", paste(current_try,collapse="")))
+    }
   }
   
   return(nb_try)
+}
+
+
+# Progression bar from the internet ---------------------------------------
+spawn_progressbar <- function(x, .name = .pb, .times = 1) {
+  .name <- substitute(.name)
+  n <- nrow(x) * .times
+  eval(substitute(.name <<- dplyr::progress_estimated(n)))
+  x
+}
+
+## make function to be map'ed accept progressbar as argument and
+## update on call
+slow_mean <- function(x, .var, .pb) {
+  Sys.sleep(1)
+  .pb$tick()$print()
+  .var <- rlang::enexpr(.var)
+  mean(x[[.var]])
 }
 
 

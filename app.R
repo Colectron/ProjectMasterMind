@@ -12,7 +12,6 @@
 #                      to load a script that solve the the game.
 ### ///////////////////////////////////////////////////////////////////////
 
-
 library(shiny)
 library(reactlog)
 library(tidyverse)
@@ -31,7 +30,12 @@ source("globalVar.R")
 
 # UI ----------------------------------------------------------------------
 
-ui <- fluidPage(titlePanel("My great mastermind !!!"),
+ui <- fluidPage(
+  titlePanel("MasterMind Algorithm testing"),
+  tabsetPanel(
+    
+# Play panel --------------------------------------------------------------
+    tabPanel("Play",
                 sidebarLayout(
                   sidebarPanel(
                     titlePanel("Combination played"),
@@ -50,11 +54,43 @@ ui <- fluidPage(titlePanel("My great mastermind !!!"),
                     column(3, offset = 5, align = "center", uiOutput("show_paragraph")),
                     uiOutput("show_colour")
                   )
-                ))
-#button_panel
+                )
+             ),
+
+# Solver Panel ------------------------------------------------------------
+    tabPanel("Try your solver",
+             fluidRow(
+               column(width = 3,
+                      wellPanel(
+                        p("WIP : Describe the solver function spec"),
+                        fileInput("file", "Choose a file"),
+                        actionButton("source_btn", "Source File"),
+                        textOutput("source_status")
+                      ),
+                      wellPanel(
+                        p("WIP : Describe the parameters function"),
+                        # Copy the chunk below to make a group of checkboxes
+                        checkboxGroupInput("checkGroup", label = h3("Checkbox group"), 
+                                           choices = list("Choice 1" = 1, "Choice 2" = 2, "Choice 3" = 3),
+                                           selected = 1),
+                        hr(),
+                        fluidRow(column(3, verbatimTextOutput("value")))
+                      )                        
+                      ),
+               column( width = 9,
+                       actionButton("runSimu","Launch Simulation"),
+                       p("WIP : The results of my simulaiton here"),
+                       plotOutput("histogram")
+                      )
+               )
+             )
+    )
+  )
+
 # Server ------------------------------------------------------------------
 
-server <- function(input, output) {
+server <- function(input, output, session) {
+# Play tab ----------------------------------------------------------------
   # Secret combination buttons
   btn5 <- generateButton(btn_name = "s_comb_1",clr = secret_combination[1])
   btn6 <- generateButton(btn_name = "s_comb_2",clr = secret_combination[2])
@@ -73,7 +109,7 @@ server <- function(input, output) {
   
   # Show the possible colours and the order
   output$show_paragraph <- renderUI({
-    paragraph <- "List and order of all the possible colour"
+    paragraph <- "List and order of all possible colour"
     tags$p(paragraph)
   })
   output$show_colour <- renderUI({
@@ -178,6 +214,74 @@ server <- function(input, output) {
     # Convert the list of button elements to a tagList
     do.call(tagList, button_elements)
   })
+  
+# Try your solver tab -----------------------------------------------------
+  
+  # Read the solver function ----
+  # Read the content of the uploaded file and store it as a reactive value
+  observeEvent(input$source_btn, {
+    solver_file_path <<- input$file$datapath
+    source_result <- tryCatch({
+      source(solver_file_path)
+      "File sourced successfully."
+    }, error = function(e) {
+      paste("Error:", e$message)
+    })
+    output$source_status <- renderText({
+      source_result
+    })
+  })
+
+  # Parameter of the simulation ----
+  
+  # Clickin the run simulation button ----
+  observeEvent(input[["runSimu"]], {
+    # Initialize simu data set
+    n <- 100
+    simu <- crossing(sqr1 = 1:8, sqr2 = 1:8, sqr3 = 1:8, sqr4 = 1:8) %>%
+      mutate(`Try N°` = row_number()) %>% 
+      group_nest(`Try N°`)
+    
+    # simu <- simu[ sample(1:dim(simu)[1],n,replace=FALSE) ,] %>% # Uncomment for full code
+    #   mutate(`Try N°` = row_number())
+    
+    # DEBUG
+    simu <- simu[ 1:n,] %>%
+      mutate(`Try N°` = row_number())
+    
+    # END DEBUG
+    
+    # Add a progression bar to the simulation :
+    pb <- progress_estimated(nrow(simu), 0)
+    
+    # Compute simulation data set
+    simu <- simu %>%
+      mutate(
+        `Nb try` = map(
+          .x = data,
+          .f = function(x, slvr_f_p = solver_file_path, .pb = NULL) {
+            if (.pb$i < .pb$n) .pb$tick()$print()
+            return( oneRun(scrt_cmb = x, slvr_f_p = slvr_f_p) )
+          },
+            # function(x){ 
+            # oneRun(scrt_cmb = x, slvr_f_p = solver_file_path)
+            # },
+          .pb = pb 
+          # .progress = TRUE
+          )
+      ) %>% 
+      unnest(`Nb try`)
+    
+    # Gives statistics to the user ----
+    output$histogram <- renderPlot({
+      hist(simu$`Nb try`, main = "Histogram of the number of tries")
+    })
+    
+  }
+  )
+  
+  
+  
 }
 
 shinyApp(ui, server)
