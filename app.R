@@ -15,6 +15,7 @@
 library(shiny)
 library(reactlog)
 library(tidyverse)
+library(waiter)
 
 # Options -----------------------------------------------------------------
 
@@ -59,6 +60,7 @@ ui <- fluidPage(
 
 # Solver Panel ------------------------------------------------------------
     tabPanel("Try your solver",
+             useWaiter(),
              fluidRow(
                column(width = 3,
                       wellPanel(
@@ -79,8 +81,12 @@ ui <- fluidPage(
                       ),
                column( width = 9,
                        actionButton("runSimu","Launch Simulation"),
-                       p("WIP : The results of my simulaiton here"),
-                       plotOutput("histogram")
+                       p("WIP : Number of try summary"),
+                       plotOutput("hist_nb_try"),
+                       plotOutput("hist_nb_try_facet"),
+                       p("WIP : Runing time summary"),
+                       plotOutput("hist_time"),
+                       plotOutput("hist_time_facet")
                       )
                )
              )
@@ -234,8 +240,13 @@ server <- function(input, output, session) {
 
   # Parameter of the simulation ----
   
+  
+  w <- Waiter$new(id = "runSimu",html = span("Initialising"))
   # Clickin the run simulation button ----
   observeEvent(input[["runSimu"]], {
+    # browser()
+    w$show()
+    
     # Initialize simu data set
     n <- 100
     simu <- crossing(sqr1 = 1:8, sqr2 = 1:8, sqr3 = 1:8, sqr4 = 1:8) %>%
@@ -256,27 +267,57 @@ server <- function(input, output, session) {
     
     # Compute simulation data set
     simu <- simu %>%
+      mutate(index = row_number()) %>% # used in the waiter shiny element
       mutate(
-        `Nb try` = map(
+        resu = map2(
           .x = data,
-          .f = function(x, slvr_f_p = solver_file_path, .pb = NULL) {
-            if (.pb$i < .pb$n) .pb$tick()$print()
-            return( oneRun(scrt_cmb = x, slvr_f_p = slvr_f_p) )
+          .y = index,
+          .f = function(x , y ,slvr_f_p = solver_file_path, .pb = NULL, n) {
+            w$update(html = sprintf("Runing : %s / %s", y, n) ) # used in the waiter shiny element
+            if (.pb$i < .pb$n) .pb$tick()$print() # progress bar of the R console 
+            output = oneRun(scrt_cmb = x, slvr_f_p = slvr_f_p) 
+            return(output)
           },
             # function(x){ 
             # oneRun(scrt_cmb = x, slvr_f_p = solver_file_path)
             # },
-          .pb = pb 
+          .pb = pb,
+          n = n()
           # .progress = TRUE
-          )
+          ),
+        scrt_cmb_nb_clr = map(data,function(x){ length(unique(unlist(x))) })
       ) %>% 
-      unnest(`Nb try`)
+      select(-index) %>% 
+      unnest(c(resu,scrt_cmb_nb_clr)) %>% 
+      mutate(runing_time = as.numeric(runing_time))
+      
+    
+    w$update(html = "Generating report")   
     
     # Gives statistics to the user ----
-    output$histogram <- renderPlot({
-      hist(simu$`Nb try`, main = "Histogram of the number of tries")
+    output$hist_nb_try <- renderPlot({
+      histPerfSolver(simu,
+                     column = "Nb try",
+                     title_precision = "number of tries per game")
+    })
+    output$hist_nb_try_facet <- renderPlot({
+      histPerfSolver(simu,column = "Nb try",
+                     facet = TRUE,
+                     title_precision = "number of tries per game \nper number of different colour in the secret combination")
+    })
+    output$hist_time <- renderPlot({
+      histPerfSolver(simu,
+                     column = "runing_time",
+                     title_precision = "number of runing time per game")
+    })
+    output$hist_time_facet <- renderPlot({
+      histPerfSolver(simu,
+                     column = "runing_time",
+                     facet = TRUE,
+                     title_precision = "number of runing time per game \nper number of different colour in the secret combination")
     })
     
+    w$hide()
   }
   )
   

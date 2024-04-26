@@ -230,9 +230,15 @@ oneRun <- function(scrt_cmb,slvr_f_p){
   )
   
   # Loop till we find the correct combination
+  runing_time <- 0
   nb_try <- 1
   while (game$history$nb_red[nb_try] != 4) {
+    # Compute solution
+    start_time <- Sys.time()  
     current_try = as.vector(solver(game$history))
+    end_time <- Sys.time()
+    runing_time <- runing_time + end_time - start_time
+    
     current_line = c(current_try,
                      redNWhite(
                        current_try = current_try,
@@ -242,33 +248,99 @@ oneRun <- function(scrt_cmb,slvr_f_p){
     nb_try = nb_try + 1
     
     ### DEBUG
-    if(FALSE){
+    if (FALSE) {
       print("------------------")
-      print(sprintf("Secret combination %s", paste(scrt_cmb,collapse="")))
+      print(sprintf("Secret combination %s", paste(scrt_cmb,collapse = "")))
       print(sprintf("N° try %s", nb_try))
-      print(sprintf("Comb tried %s", paste(current_try,collapse="")))
+      print(sprintf("Comb tried %s", paste(current_try,collapse = "")))
     }
   }
   
-  return(nb_try)
+  return(tibble(`Nb try` = nb_try,runing_time = runing_time))
 }
 
 
-# Progression bar from the internet ---------------------------------------
-spawn_progressbar <- function(x, .name = .pb, .times = 1) {
-  .name <- substitute(.name)
-  n <- nrow(x) * .times
-  eval(substitute(.name <<- dplyr::progress_estimated(n)))
-  x
-}
+# histPerfSolver ----------------------------------------------------------
+# State : WIP
+# Description : 
+# Input :
+# Output :
+### ///////////////////////////////////////////////////////////////////////
 
-## make function to be map'ed accept progressbar as argument and
-## update on call
-slow_mean <- function(x, .var, .pb) {
-  Sys.sleep(1)
-  .pb$tick()$print()
-  .var <- rlang::enexpr(.var)
-  mean(x[[.var]])
+histPerfSolver <- function(data, column, x_lab = column, title_precision = NULL, facet = FALSE){
+  
+  num_2_chr <- function(x){
+    output <- format(x,digits = 2,nsmall = 1) %>% 
+    return(output)
+  }
+  
+  p <- data %>% 
+    ggplot(aes(x = .data[[column]])) +
+    geom_histogram(color = "#000000", fill = "#0099F8") +
+    theme_minimal() + 
+    theme(
+      plot.title = element_text(color = "#0099F8", size = 16, face = "bold"),
+      plot.subtitle = element_text(size = 10, face = "bold"),
+      plot.caption = element_text(face = "italic")
+    ) +
+    labs(
+      title = paste0("Histogram of",title_precision),
+      subtitle = "WIP : here is the name of the solver function and the number of games",
+      x = x_lab,
+      y = "Count"
+      ) 
+  
+    if (facet) {
+      # Build title facets
+      title_facets <-  paste("Number of differents colour :",1:4)
+      names(title_facets) <- as.character(1:4)
+    
+      # Build summary statistics
+      stats_facets <- data %>% group_by(scrt_cmb_nb_clr) %>%
+        summarize(
+          min = num_2_chr(min(get(column))),
+          max = num_2_chr(max(get(column))),
+          mean = num_2_chr(mean(get(column))),
+          median = num_2_chr(median(get(column))),
+          ) %>% 
+        mutate(stats = sprintf("min : %s\nmax : %s\nmean : %s\nmedian : %s\n",min,max,mean,median))
+      
+      p <- p + facet_wrap(
+        ~ scrt_cmb_nb_clr,
+        labeller = labeller(scrt_cmb_nb_clr = title_facets)
+      ) +
+        geom_text( data = stats_facets,
+                   hjust = 1, vjust = 1,size = 3,
+          aes(x = Inf,
+              y = Inf,
+              label = stats,
+              color = NULL,
+              group = NULL)
+        )
+        
+    } else {
+      stats <- data %>%
+        summarize(
+          min = num_2_chr(min(get(column))),
+          max = num_2_chr(max(get(column))),
+          mean = num_2_chr(mean(get(column))),
+          median = num_2_chr(median(get(column))),
+        ) %>% 
+        mutate(stats = sprintf("min : %s\nmax : %s\nmean : %s\nmedian : %s\n",min,max,mean,median))
+      
+      p <- p + 
+        geom_text( data = stats,
+                   hjust = 1, vjust = 1,size = 5,
+                   aes(x = Inf,
+                       y = Inf,
+                       label = stats,
+                       color = NULL,
+                       group = NULL)
+        )
+      
+    }
+  
+  return(p)
 }
 
 
