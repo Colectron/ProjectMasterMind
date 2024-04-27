@@ -1,6 +1,6 @@
 ### ///////////////////////////////////////////////////////////////////////
 # Script name : fct4app.R
-# Script status :
+# Script status : WIP
 # Script description : Build the functions used in the app.R. The objective is
 #                      to have a short and clean app script.
 ### ///////////////////////////////////////////////////////////////////////
@@ -211,6 +211,7 @@ hintButton <- function(hints_info) {
 ### ///////////////////////////////////////////////////////////////////////
 
 oneRun <- function(scrt_cmb,slvr_f_p){
+  browser()
   scrt_cmb = unlist(scrt_cmb) # force the type of scrt_cmb to be a simple vector
   
   # Source the function
