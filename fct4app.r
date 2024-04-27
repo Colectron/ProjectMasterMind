@@ -211,6 +211,7 @@ hintButton <- function(hints_info) {
 ### ///////////////////////////////////////////////////////////////////////
 
 oneRun <- function(scrt_cmb,slvr_f_p){
+  browser()
   scrt_cmb = unlist(scrt_cmb) # force the type of scrt_cmb to be a simple vector
   
   # Source the function
