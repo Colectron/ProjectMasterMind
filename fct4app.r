@@ -229,6 +229,7 @@ oneRun <- function(scrt_cmb,slvr_f_p){
     )
   )
   
+  browser()
   # Loop till we find the correct combination
   runing_time <- 0
   nb_try <- 1

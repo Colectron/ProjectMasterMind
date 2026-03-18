@@ -15,6 +15,7 @@
 
 # Libraries ---------------------------------------------------------------
 
+library(gtools)
 library(shiny)
 library(reactlog)
 library(waiter)
