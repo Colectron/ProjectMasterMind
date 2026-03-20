@@ -139,7 +139,7 @@ server <- function(input, output, session) {
   # Read the content of the uploaded file and store it as a reactive value
   observeEvent(input$source_btn, {
     
-    req(inut$file)
+    req(input$file)
     
     solver_file_path(input$file$datapath)
     

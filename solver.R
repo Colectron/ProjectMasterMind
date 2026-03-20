@@ -23,10 +23,9 @@ all_comb <- crossing(pawn1 = 1:8, pawn2 = 1:8, pawn3 = 1:8, pawn4 = 1:8) %>%
     weight = 1,
     nb_red = NA,
     nb_white = NA,
-    id = row_number(),
     tried = FALSE,
-    matches_white_hint = NA,
-    matches_red_hint = NA
+    matches_white_hint = T, # indicating if the sequence matches white hints, if TRUE it is a possible solution
+    matches_red_hint = T # same
   )
 iter <-  1
 
@@ -45,66 +44,121 @@ solver_a_bit_smarter <- function(history){
   
   # Initialization
   last_try <- history[iter,c("pawn1","pawn2","pawn3","pawn4")]
+  last_try_seq <- paste(last_try,collapse="")
   nb_white <- as.numeric(history[iter,"nb_white"])
   nb_red <- as.numeric(history[iter,"nb_red"])
-  
-  #
-  if( !(iter>1 & (nb_white + nb_red)>0) ){
-  }else{
-    # Initialisation algorithm
-    .tmp_perm <- permutations(4,nb_white,c(1,2,3,4))
-    .tmp_comb <- combinations(4,nb_white,c(1,2,3,4))
-    perm_values <- matrix(last_try[.tmp_perm], nrow = nrow(.tmp_perm))
-    
-    # Red hints
-    combn_n_red <- combn(1:4, max(nb_red,0) )
-    combn_n_red <- combn_n_red %>% t %>% 
-      tibble() %>% 
-      mutate(id = row_number()) %>% 
-      group_nest(id) %>%
-      mutate(data = map(data,unlist))
-    
-    # White hints
-    combn_n_white <- tibble(
-      position = asplit(.tmp_comb,1),
-      values = rep(list(perm_values),nrow(.tmp_comb))
-      ) |> 
-      mutate(
-        position = map(position, all_permutations)
-      ) |>
-      unnest(position) |> 
-      mutate(
-        patterns = map2(
-          .x = position, 
-          .y = values, 
-          .f = function(pos,val){map(asplit(val,1),~replace_at_pos("....",pos,.x))} 
-          )
-      ) |>
-      pull(patterns) |>
-      unlist() |> unique()
-  }
-
   
   # Update all comb according to the last element of history
   all_comb[ all_comb$seq == paste(last_try,collapse = ""), "tried"] = TRUE
   all_comb[ all_comb$seq == paste(last_try,collapse = ""), "nb_white"] = history[iter,"nb_white"]
   all_comb[ all_comb$seq == paste(last_try,collapse = ""), "nb_red"] = history[iter,"nb_red"]
   
-  # For all combs compute if it may matches white or matches red
-  all_comb <- all_comb |> 
-    rowwise() |> 
-    mutate(
-      matches_white_hint = case_when(
-        is.na(matches_white_hint) | matches_white_hint ~ any(str_detect(seq,combn_n_white)),
-        matches_white_hint
-      )
-    )
+  # Algorithm 
+  if( !(iter>1 & (nb_white + nb_red)>0) ){
+  }else{
+
+    # Red hints
+    if(nb_red>0){
+      # Initialization
+      .tmp_comb <- combinations(4,nb_red,c(1,2,3,4))
+      
+      red_hints_patterns <- asplit(.tmp_comb,1) |>
+        map_chr(
+          function(pos) {
+            pattern <- rep(".", 4)
+            pattern[pos] <- last_try[pos]
+            str_c(pattern, collapse = "")
+          }
+        )
+      
+      # For all sequences, computes if it matches red hints
+      all_comb <- all_comb |> 
+        rowwise() |> 
+        mutate(
+          matches_red_hint = case_when(
+            matches_red_hint ~ any(str_detect(seq,red_hints_patterns)),
+            !matches_red_hint ~ matches_red_hint,
+            .default = matches_red_hint
+          )
+        ) 
+    }
+    
+    # White hints
+    if(nb_white>0){
+      # Initialization
+      .tmp_perm <- permutations(4,nb_white,c(1,2,3,4))
+      .tmp_comb <- combinations(4,nb_white,c(1,2,3,4))
+      perm_values <- matrix(last_try[as.numeric(.tmp_perm)], nrow = nrow(.tmp_perm))
+      
+      # Compute all possible patterns according to white hints
+      white_hints_patterns <- tibble(
+        position = asplit(.tmp_comb,1),
+        values = rep(list(perm_values),nrow(.tmp_comb))
+      ) |> 
+        mutate(
+          position = map(position, all_permutations)
+        ) |>
+        unnest(position) |> 
+        mutate(
+          patterns = map2(
+            .x = position, 
+            .y = values, 
+            .f = function(pos,val){map(asplit(val,1),~replace_at_pos("....",pos,.x))} 
+          )
+        ) |>
+        pull(patterns) |>
+        unlist() |> unique()  
+      
+      # Remove patterns matches the last try, ie impossible solutions
+      white_hints_patterns <- white_hints_patterns[str_detect(last_try_seq,white_hints_patterns,negate = T)]
+      
+      # For all sequences, computes if it matches white hints
+      all_comb <- all_comb |> 
+        rowwise() |> 
+        mutate(
+          matches_white_hint = case_when(
+            matches_white_hint ~ any(str_detect(seq,white_hints_patterns)),
+            matches_white_hint ~ matches_white_hint,
+            .default = matches_white_hint
+          )
+        )  
+    }
+    
+  }
 
   output <- all_comb %>% 
-    filter(weight == max(.$weight),!tried,matches_white_hint) %>% 
+    filter(
+      weight == max(.$weight),
+      !tried,
+      matches_white_hint,
+      matches_red_hint
+      ) %>% 
     select(dplyr::contains("pawn")) %>% 
     .[sample(1:dim(.)[1],1),]
   
+  print("------------------------------------------------------")  
+  message <- sprintf(
+    "Current try : %s (R : %s; B %s) || nb séq restantes : %s", 
+    paste(output,collapse=""),
+    nb_red,
+    nb_white,
+    all_comb %>% 
+      filter(
+        weight == max(.$weight),
+        !tried,
+        matches_white_hint,
+        matches_red_hint
+        ) |> 
+      nrow()
+    )
+  print(message)
+  
+  a <- readline("Debug? (y/n): ")
+  if(a=="y"){
+    browser()
+  }
+  
+  all_comb <<- all_comb
   iter <<- iter + 1
   return(output)
 }
