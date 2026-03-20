@@ -229,13 +229,17 @@ oneRun <- function(scrt_cmb,slvr_f_p){
     )
   )
   
+  # Debug
+  set.seed(1234)
+  debug_solver = F
+  
   # Loop till we find the correct combination
   runing_time <- 0
   nb_try <- 1
   while (game$history$nb_red[nb_try] != 4) {
     # Compute solution
     start_time <- Sys.time()  
-    current_try = as.vector(solver(game$history))
+    current_try = as.vector(solver(game$history,scrt_cmb))
     end_time <- Sys.time()
     runing_time <- runing_time + end_time - start_time
     
@@ -245,15 +249,29 @@ oneRun <- function(scrt_cmb,slvr_f_p){
                        to_find = scrt_cmb)
     ) %>% unlist
     game$history = rbind(game$history,current_line)
-    nb_try = nb_try + 1
     
     ### DEBUG
-    if (FALSE) {
-      print("------------------")
-      print(sprintf("Secret combination %s", paste(scrt_cmb,collapse = "")))
-      print(sprintf("N° try %s", nb_try))
-      print(sprintf("Comb tried %s", paste(current_try,collapse = "")))
+    if (F) {
+      
+      scrt_cmb_ok <- as.numeric(paste(scrt_cmb,collapse="") %in% all_comb$seq)
+      
+      # print("------------------")
+      print(sprintf("N° try %s, seq : %s (R : %s; B : %s) || secret combination %s || Contains scrt comb : %s",
+                    nb_try,
+                    paste(current_try,collapse = ""),
+                    game$history$nb_red[nb_try+1],
+                    game$history$nb_white[nb_try+1],
+                    paste(scrt_cmb,collapse = ""),
+                    scrt_cmb_ok
+                    )
+            )
+      a <- readline("Debug? (y/n): ")
+      if(a=="y"){
+        browser()
+      }
     }
+    
+    nb_try = nb_try + 1
   }
   
   return(tibble(`Nb try` = nb_try,runing_time = runing_time))
