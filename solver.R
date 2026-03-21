@@ -71,10 +71,12 @@ all_comb <- crossing(pawn1 = 1:8, pawn2 = 1:8, pawn3 = 1:8, pawn4 = 1:8) %>%
     matches_white_hint = T, # indicating if the sequence matches white hints, if TRUE it is a possible solution
     matches_red_hint = T # same
   )
-pool = 1:8
+
+pool <-1:8
+
 iter <- 0
 
-solver_a_bit_smarter <- function(history,scrt_cmb,debug_solver=F){
+solver_a_bit_smarter <- function(history,debug_solver=F){
 
   if (exists("debug_solver") && isTRUE(debug_solver)) {
     browser()
@@ -92,7 +94,7 @@ solver_a_bit_smarter <- function(history,scrt_cmb,debug_solver=F){
   all_comb[ all_comb$seq == paste(last_try,collapse = ""), "nb_red"] = history[iter+1,"nb_red"]
   
   # Algorithm 
-  if( !(iter>0 & (nb_white + nb_red)>0) ){
+  if( iter<1 || (nb_white + nb_red)==0 ){
     # Pool approach
     pool <<- setdiff(pool,as.numeric(last_try))
     pool_seq <- crossing(pawn1 = pool, pawn2 = pool, pawn3 = pool, pawn4 = pool) |> 
@@ -224,49 +226,6 @@ solver_a_bit_smarter <- function(history,scrt_cmb,debug_solver=F){
     
   }
 
-  
-  # Debugging message
-  if(T){
-    
-    all_comb_tmp <- all_comb |> 
-      filter(
-        weight == max(weight),
-        !tried,
-        matches_pool,
-        matches_trace,
-        matches_white_hint,
-        matches_red_hint
-      ) |> 
-      ungroup()
-    
-    output_tmp <- all_comb_tmp |>
-      select(dplyr::contains("pawn")) |>  
-      slice_sample(n = 1)
-    
-    print("------------------------------------------------------")
-    message <- sprintf(
-      "Combinations tried: %s, last try : %s (R : %s; B %s) || nb séq restantes : %s || next try %s || Pool pawns : %s",
-      iter,
-      last_try_seq,
-      nb_red,
-      nb_white,
-      all_comb_tmp |> 
-        nrow(),
-      paste(output_tmp,collapse=""),
-      paste0(pool,collapse="")
-    )
-    print(message)
-    
-    if( !paste(scrt_cmb,collapse="") %in% all_comb_tmp$seq){
-      browser()
-    }
-    
-    # a <- readline("Debug? (y/n): ")
-    # if(a=="y"){
-    #   browser()
-    # } 
-  }
-  
   all_comb <- all_comb |> 
     filter(
       weight == max(weight),
@@ -288,8 +247,67 @@ solver_a_bit_smarter <- function(history,scrt_cmb,debug_solver=F){
   return(output)
 }
 
+# Distance based solver ---------------------------------------------------
+# Initialization
+all_comb2 <- crossing(pawn1 = 1:8, pawn2 = 1:8, pawn3 = 1:8, pawn4 = 1:8) |>
+  rowwise() |>
+  mutate(
+    seq = paste(c(pawn1,pawn2,pawn3,pawn4),collapse=""),
+    dist = NA
+  ) |> 
+  ungroup()
+
+hist_dist <-
+  tibble(seq="0000",iter=-1,dist=9999,same_dist = list())
+
+iter2 <- 0
+solver_distance_based <- function(history){
+  # Initialization
+  last_try <- history[iter2+1,c("pawn1","pawn2","pawn3","pawn4")]
+  last_try_seq <- paste(last_try,collapse="")
+  nb_white <- as.numeric(history[iter2+1,"nb_white"])
+  nb_red <- as.numeric(history[iter2+1,"nb_red"])
+
+  # Algorithm
+  if(iter2>0){
+    dist_current <- c(rep(0,nb_red),rep(1,nb_white),rep(2,4-(nb_red+nb_white))) |> paste(collapse="")
+    
+    all_comb2 <<- all_comb2 |> 
+      rowwise() |> 
+      mutate(dist = rnw2num(last_try_seq,seq)) |> 
+      filter(dist==dist_current) |> 
+      ungroup()
+  }
+  
+  # Build output
+  output <- all_comb2 |>
+    select(dplyr::contains("pawn")) |>  
+    slice_sample(n = 1)
+  
+  ### DEBUG
+  if (T) {
+    print("------------------")
+    print(sprintf("Try n°%s : %s (R : %s; B : %s) || nb remaining comb %s",
+                  iter2+1,
+                  last_try_seq,
+                  nb_red,
+                  nb_white,
+                  all_comb2|> nrow())
+    )
+    # a <- readline("Debug? (y/n): ")
+    # if(a=="y"){
+    #   browser()
+    # }
+  }
+  
+  # Update and exit function
+  iter2 <<- iter2 + 1
+  return(output)
+}
 
 
 # Write the name of your function here
-solver <- solver_a_bit_smarter
-# end
+solver <- solver_distance_based
+
+# END ---------------------------------------------------------------------
+

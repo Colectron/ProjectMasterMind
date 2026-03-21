@@ -112,7 +112,7 @@ generateButton <- function(btn_name,clr) {
 
 # redNWhite ---------------------------------------------------------------
 # State : DONE
-# Description : Function to compute the number of Red & white pawns to return 
+# Description : Function to compute the number of Red & white pawns to return
 #               giving a try and a secret sequence.
 # Input :
 #        current_try : numerical vector
@@ -123,20 +123,42 @@ redNWhite <- function(current_try,to_find){
   # browser()
   nb_red = 0
   nb_white = 0
-  
+
   for (i in unique(to_find) ) {
     nb_red_found = sum(( which(to_find == i) %in% which(current_try == i) ))
     nb_red = nb_red + nb_red_found
     if ( length(which(to_find == i)) > nb_red_found ) {
-      nb_white = nb_white + 
+      nb_white = nb_white +
         (
-          min( length(which(current_try == i)) , length(which(to_find == i)) ) - 
+          min( length(which(current_try == i)) , length(which(to_find == i)) ) -
             nb_red_found
         )
     }
   }
-  
+
   output = tibble(nb_red = nb_red , nb_white = nb_white )
+  return(output)
+}
+
+
+# rnw2num -----------------------------------------------------------------
+# State : DONE
+# Description : Function to compute the number of Red & white pawns to return
+#               giving a try and a secret sequence but the character version.
+#               The outpur is returned as a numerical value to be exploides as
+#               a pseudo-scalar function to optimise.
+# Input :
+#        current_try : character vector
+#        to_find : character vector of the same length as current_try
+# Output :
+### ///////////////////////////////////////////////////////////////////////
+rnw2num <- function(current_try,to_find){
+  current_try <- str_split(current_try,"") |> unlist()
+  to_find <- str_split(to_find,"") |> unlist()
+  
+  output <- redNWhite(current_try,to_find)
+  output <- c(rep(0,output$nb_red),rep(1,output$nb_white),rep(2,4-(output$nb_red+output$nb_white))) |> paste(collapse="")
+  
   return(output)
 }
 
@@ -229,17 +251,13 @@ oneRun <- function(scrt_cmb,slvr_f_p){
     )
   )
   
-  # Debug
-  set.seed(1234)
-  debug_solver = F
-  
   # Loop till we find the correct combination
   runing_time <- 0
   nb_try <- 1
   while (game$history$nb_red[nb_try] != 4) {
     # Compute solution
     start_time <- Sys.time()  
-    current_try = as.vector(solver(game$history,scrt_cmb))
+    current_try = as.vector(solver(game$history))
     end_time <- Sys.time()
     runing_time <- runing_time + end_time - start_time
     
@@ -252,23 +270,19 @@ oneRun <- function(scrt_cmb,slvr_f_p){
     
     ### DEBUG
     if (F) {
-      
-      scrt_cmb_ok <- as.numeric(paste(scrt_cmb,collapse="") %in% all_comb$seq)
-      
-      # print("------------------")
-      print(sprintf("N° try %s, seq : %s (R : %s; B : %s) || secret combination %s || Contains scrt comb : %s",
+      print("------------------")
+      print(sprintf("N° try %s, seq : %s (R : %s; B : %s) || secret combination %s",
                     nb_try,
                     paste(current_try,collapse = ""),
                     game$history$nb_red[nb_try+1],
                     game$history$nb_white[nb_try+1],
-                    paste(scrt_cmb,collapse = ""),
-                    scrt_cmb_ok
+                    paste(scrt_cmb,collapse = "")
                     )
             )
-      a <- readline("Debug? (y/n): ")
-      if(a=="y"){
-        browser()
-      }
+      # a <- readline("Debug? (y/n): ")
+      # if(a=="y"){
+      #   browser()
+      # }
     }
     
     nb_try = nb_try + 1
@@ -302,7 +316,7 @@ histPerfSolver <- function(data, column, x_lab = column, title_precision = NULL,
       plot.caption = element_text(face = "italic")
     ) +
     labs(
-      title = paste0("Histogram of",title_precision),
+      title = paste0("Histogram of ",title_precision),
       subtitle = "WIP : here is the name of the solver function and the number of games",
       x = x_lab,
       y = "Count"
