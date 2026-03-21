@@ -249,50 +249,61 @@ solver_a_bit_smarter <- function(history,debug_solver=F){
 
 # Distance based solver ---------------------------------------------------
 # Initialization
-all_comb2 <- crossing(pawn1 = 1:8, pawn2 = 1:8, pawn3 = 1:8, pawn4 = 1:8) |>
-  rowwise() |>
-  mutate(
-    seq = paste(c(pawn1,pawn2,pawn3,pawn4),collapse=""),
-    dist = NA
-  ) |> 
-  ungroup()
+all_comb2 <- expand.grid(1:8, 1:8, 1:8, 1:8) |>
+  as.matrix()
 
-hist_dist <-
-  tibble(seq="0000",iter=-1,dist=9999,same_dist = list())
+# Functions
+score_matrix <- function(candidates, guess) {
+  
+  guess <- as.integer(guess)
+  
+  # red
+  reds <- rowSums(candidates == matrix(guess, nrow(candidates), 4, byrow = TRUE))
+  
+  # counts (0-8)
+  counts_cand <- t(apply(candidates, 1, tabulate, nbins = 8))
+  counts_guess <- tabulate(guess, nbins = 8)
+  
+  commons <- rowSums(pmin(counts_cand, matrix(counts_guess, nrow(candidates), 8, byrow = TRUE)))
+  
+  whites <- commons - reds
+  
+  output <- list(reds = reds, whites = whites)
+  return(output)
+}
 
 iter2 <- 0
 solver_distance_based <- function(history){
+  
   # Initialization
-  last_try <- history[iter2+1,c("pawn1","pawn2","pawn3","pawn4")]
-  last_try_seq <- paste(last_try,collapse="")
-  nb_white <- as.numeric(history[iter2+1,"nb_white"])
-  nb_red <- as.numeric(history[iter2+1,"nb_red"])
-
+  last_try <- as.integer(history[iter2+1,1:4])
+  nb_white <- history[iter2+1,"nb_white"] |> as.numeric()
+  nb_red <- history[iter2+1,"nb_red"] |> as.numeric()
+  
   # Algorithm
-  if(iter2>0){
-    dist_current <- c(rep(0,nb_red),rep(1,nb_white),rep(2,4-(nb_red+nb_white))) |> paste(collapse="")
+  if(iter2 > 0){
+    scores <- score_matrix(all_comb2, last_try)
     
-    all_comb2 <<- all_comb2 |> 
-      rowwise() |> 
-      mutate(dist = rnw2num(last_try_seq,seq)) |> 
-      filter(dist==dist_current) |> 
-      ungroup()
+    keep <- scores$reds == nb_red & scores$whites == nb_white
+    
+    all_comb2 <<- all_comb2[keep, , drop = FALSE]
   }
   
   # Build output
-  output <- all_comb2 |>
-    select(dplyr::contains("pawn")) |>  
-    slice_sample(n = 1)
+  output <- all_comb2[sample(nrow(all_comb2), 1), ]
+  names(output) = paste0("pawn",1:4)
   
-  ### DEBUG
-  if (T) {
+  if (F) {
     print("------------------")
-    print(sprintf("Try n°%s : %s (R : %s; B : %s) || nb remaining comb %s",
-                  iter2+1,
-                  last_try_seq,
-                  nb_red,
-                  nb_white,
-                  all_comb2|> nrow())
+    print(
+      sprintf(
+        "Try n°%s : %s (R : %s; B : %s) || nb remaining comb %s",
+        iter2+1,
+        paste(last_try,collapse=""),
+        nb_red,
+        nb_white,
+        all_comb2 |> nrow()
+      )
     )
     # a <- readline("Debug? (y/n): ")
     # if(a=="y"){
@@ -304,7 +315,6 @@ solver_distance_based <- function(history){
   iter2 <<- iter2 + 1
   return(output)
 }
-
 
 # Write the name of your function here
 solver <- solver_distance_based

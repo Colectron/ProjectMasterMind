@@ -261,20 +261,21 @@ server <- function(input, output, session) {
                      title_precision = "number of tries per game")
     })
     output$hist_nb_try_facet <- renderPlot({
-      histPerfSolver(simu,column = "Nb try",
+      histPerfSolver(simu,
+                     column = "Nb try",
                      facet = TRUE,
                      title_precision = "number of tries per game \nper number of different colour in the secret combination")
     })
     output$hist_time <- renderPlot({
       histPerfSolver(simu,
                      column = "runing_time",
-                     title_precision = "number of runing time per game")
+                     title_precision = "runing time per game")
     })
     output$hist_time_facet <- renderPlot({
       histPerfSolver(simu,
                      column = "runing_time",
                      facet = TRUE,
-                     title_precision = "number of runing time per game \nper number of different colour in the secret combination")
+                     title_precision = "runing time per game \nper number of different colour in the secret combination")
     })
     
     w$hide()
